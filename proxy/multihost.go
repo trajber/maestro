@@ -3,7 +3,6 @@ package proxy
 import (
 	"container/ring"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -34,7 +33,7 @@ func NewMultiHostReverseProxy(targets []*url.URL) *MultiHostReverseProxy {
 			return
 		}
 
-		log.Println("Sending request to", target)
+		// log.Println("Sending request to", target)
 
 		targetQuery := target.RawQuery
 		req.URL.Scheme = target.Scheme
@@ -76,32 +75,6 @@ func (r *MultiHostReverseProxy) AddTarget(u *url.URL) {
 
 	e := &ring.Ring{Value: u}
 	r.targets.Link(e)
-	log.Println("Added", u)
-	dump(r.targets)
-}
-
-func dump(r *ring.Ring) {
-	if r == nil {
-		fmt.Println("empty")
-		return
-	}
-
-	i, n := 0, r.Len()
-
-	for p := r; i < n; p = p.Next() {
-		fmt.Printf("%4d: %p(%s) = {<- %p(%s) | %p(%s) ->}\n",
-			i,
-			p,
-			p.Value,
-			p.Prev(),
-			p.Prev().Value,
-			p.Next(),
-			p.Next().Value,
-		)
-		i++
-	}
-
-	fmt.Println()
 }
 
 func (r *MultiHostReverseProxy) RemoveTarget(u *url.URL) error {
@@ -128,15 +101,9 @@ func (r *MultiHostReverseProxy) RemoveTarget(u *url.URL) error {
 		return ErrHostNotFound
 	}
 
-	log.Println("Last used is", r.lastUsed.Value)
-
 	if r.lastUsed.Next().Value.(*url.URL).String() == u.String() {
 		r.lastUsed = r.targets.Next()
-		log.Println("Last used to", r.targets.Next().Value)
 	}
-
-	log.Println("Removed", removed)
-	dump(r.targets)
 
 	return nil
 }
