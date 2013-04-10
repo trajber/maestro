@@ -31,7 +31,7 @@ func NewMultiHostReverseProxy(targets []*url.URL) *MultiHostReverseProxy {
 			return
 		}
 
-		log.Println("Sending request to", target)
+		// log.Println("Sending request to", target)
 
 		targetQuery := target.RawQuery
 		req.URL.Scheme = target.Scheme
