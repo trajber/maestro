@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 )
 
 var (
@@ -66,8 +65,16 @@ func (r *MultiHostReverseProxy) chooseNextTarget() (*url.URL, error) {
 }
 
 func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
+	aslash := false
+	if a[len(a)-1] == '/' {
+		aslash = true
+	}
+
+	bslash := false
+	if b[0] == '/' {
+		bslash = true
+	}
+
 	switch {
 	case aslash && bslash:
 		return a + b[1:]
