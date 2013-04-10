@@ -15,11 +15,11 @@ For instance, to send incoming requests on port 8082 to port 8080 or 8081:
 	)
 
 	func main() {
-		u1, _ := url.Parse("http://localhost:8080/")
-		u2, _ := url.Parse("http://localhost:8081/")
+		u1, _ := url.Parse("http://1.1.1.1:8080/")
+		u2, _ := url.Parse("http://2.2.2.2:8080/")
 		targets := []*url.URL{u1, u2}
 		lb := balancer.NewLoadBalancer(targets)
-		log.Fatal(http.ListenAndServe(":8082", lb))
+		log.Fatal(http.ListenAndServe(":8080", lb))
 	}
 
 You can also change the target hosts dinamically:
@@ -32,8 +32,8 @@ You can also change the target hosts dinamically:
 		"net/url"
 	)
 
-	u1, _ := url.Parse("http://localhost:8080/")
-	u2, _ := url.Parse("http://localhost:8081/")
+	u1, _ := url.Parse("http://1.1.1.1:8080/")
+	u2, _ := url.Parse("http://2.2.2.2:8080/")
 
 	targets := []*url.URL{u1, u2}
 
@@ -43,11 +43,11 @@ You can also change the target hosts dinamically:
 		// Adding and removing a new host dinamically every 6 seconds
 		for {
 			time.Sleep(6 * time.Second)
-			u, _ := url.Parse("http://localhost:8082/")
+			u, _ := url.Parse("http://3.3.3.3:8080/")
 			lb.AddTarget(u)
 			time.Sleep(6 * time.Second)
 			lb.RemoveTarget(u)
 		}
 	}()
 
-	log.Fatal(http.ListenAndServe(":8083", lb))
+	log.Fatal(http.ListenAndServe(":8080", lb))
