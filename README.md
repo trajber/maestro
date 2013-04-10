@@ -27,7 +27,7 @@ You can also change the target hosts dinamically:
 	package main
 
 	import (
-		"maestro/proxy"
+		"maestro/balancer"
 		"net/http"
 		"net/url"
 	)
