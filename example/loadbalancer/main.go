@@ -22,12 +22,12 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(6 * time.Second)
-			u, _ := url.Parse("http://localhost:8083/")
+			u, _ := url.Parse("http://localhost:8082/")
 			lb.AddTarget(u)
 			time.Sleep(6 * time.Second)
 			lb.RemoveTarget(u)
 		}
 	}()
 
-	log.Fatal(http.ListenAndServe(":8082", lb))
+	log.Fatal(http.ListenAndServe(":8083", lb))
 }
