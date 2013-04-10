@@ -43,8 +43,7 @@ func NewMultiHostReverseProxy(targets []*url.URL) *MultiHostReverseProxy {
 		}
 	}
 
-	reverse.ReverseProxy = &httputil.ReverseProxy{}
-	reverse.ReverseProxy.Director = director
+	reverse.ReverseProxy = &httputil.ReverseProxy{Director: director}
 
 	return reverse
 }
