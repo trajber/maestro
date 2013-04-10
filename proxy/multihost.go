@@ -3,19 +3,23 @@ package proxy
 import (
 	"container/ring"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sync"
 )
 
 var (
 	ErrNoHostAvailable = errors.New("No host available")
+	ErrHostNotFound    = errors.New("Host not found")
 )
 
 type MultiHostReverseProxy struct {
 	targets  *ring.Ring
 	lastUsed *ring.Ring
+	mu       sync.RWMutex
 	*httputil.ReverseProxy
 }
 
@@ -30,7 +34,7 @@ func NewMultiHostReverseProxy(targets []*url.URL) *MultiHostReverseProxy {
 			return
 		}
 
-		// log.Println("Sending request to", target)
+		log.Println("Sending request to", target)
 
 		targetQuery := target.RawQuery
 		req.URL.Scheme = target.Scheme
@@ -49,6 +53,9 @@ func NewMultiHostReverseProxy(targets []*url.URL) *MultiHostReverseProxy {
 }
 
 func (r *MultiHostReverseProxy) chooseNextTarget() (*url.URL, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	if r.targets.Len() == 0 {
 		return nil, ErrNoHostAvailable
 	}
@@ -61,6 +68,77 @@ func (r *MultiHostReverseProxy) chooseNextTarget() (*url.URL, error) {
 	r.lastUsed = r.lastUsed.Next()
 
 	return target, nil
+}
+
+func (r *MultiHostReverseProxy) AddTarget(u *url.URL) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	e := &ring.Ring{Value: u}
+	r.targets.Link(e)
+	log.Println("Added", u)
+	dump(r.targets)
+}
+
+func dump(r *ring.Ring) {
+	if r == nil {
+		fmt.Println("empty")
+		return
+	}
+
+	i, n := 0, r.Len()
+
+	for p := r; i < n; p = p.Next() {
+		fmt.Printf("%4d: %p(%s) = {<- %p(%s) | %p(%s) ->}\n",
+			i,
+			p,
+			p.Value,
+			p.Prev(),
+			p.Prev().Value,
+			p.Next(),
+			p.Next().Value,
+		)
+		i++
+	}
+
+	fmt.Println()
+}
+
+func (r *MultiHostReverseProxy) RemoveTarget(u *url.URL) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r == nil {
+		return ErrHostNotFound
+	}
+
+	var removed *ring.Ring
+
+	i, n := 0, r.targets.Len()
+
+	for p := r.targets; i < n; p = p.Next() {
+		url, _ := p.Value.(*url.URL)
+		if url.String() == u.String() {
+			removed = p.Prev().Unlink(1)
+			break
+		}
+	}
+
+	if removed == nil {
+		return ErrHostNotFound
+	}
+
+	log.Println("Last used is", r.lastUsed.Value)
+
+	if r.lastUsed.Next().Value.(*url.URL).String() == u.String() {
+		r.lastUsed = r.targets.Next()
+		log.Println("Last used to", r.targets.Next().Value)
+	}
+
+	log.Println("Removed", removed)
+	dump(r.targets)
+
+	return nil
 }
 
 func singleJoiningSlash(a, b string) string {
