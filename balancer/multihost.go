@@ -1,4 +1,4 @@
-package proxy
+package balancer
 
 import (
 	"container/ring"
@@ -15,15 +15,15 @@ var (
 	ErrHostNotFound    = errors.New("Host not found")
 )
 
-type MultiHostReverseProxy struct {
+type LoadBalancer struct {
 	targets  *ring.Ring
 	lastUsed *ring.Ring
 	mu       sync.RWMutex
 	*httputil.ReverseProxy
 }
 
-func NewMultiHostReverseProxy(targets []*url.URL) *MultiHostReverseProxy {
-	reverse := new(MultiHostReverseProxy)
+func NewLoadBalancer(targets []*url.URL) *LoadBalancer {
+	reverse := new(LoadBalancer)
 	reverse.targets = slice2ring(targets)
 
 	director := func(req *http.Request) {
@@ -51,7 +51,7 @@ func NewMultiHostReverseProxy(targets []*url.URL) *MultiHostReverseProxy {
 	return reverse
 }
 
-func (r *MultiHostReverseProxy) chooseNextTarget() (*url.URL, error) {
+func (r *LoadBalancer) chooseNextTarget() (*url.URL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -69,7 +69,7 @@ func (r *MultiHostReverseProxy) chooseNextTarget() (*url.URL, error) {
 	return target, nil
 }
 
-func (r *MultiHostReverseProxy) AddTarget(u *url.URL) {
+func (r *LoadBalancer) AddTarget(u *url.URL) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -77,7 +77,7 @@ func (r *MultiHostReverseProxy) AddTarget(u *url.URL) {
 	r.targets.Link(e)
 }
 
-func (r *MultiHostReverseProxy) RemoveTarget(u *url.URL) error {
+func (r *LoadBalancer) RemoveTarget(u *url.URL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

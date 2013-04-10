@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"maestro/proxy"
+	"maestro/balancer"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -17,17 +17,17 @@ func main() {
 
 	targets := []*url.URL{u1, u2}
 
-	prxy := proxy.NewMultiHostReverseProxy(targets)
+	lb := balancer.NewLoadBalancer(targets)
 
 	go func() {
 		for {
 			time.Sleep(6 * time.Second)
 			u, _ := url.Parse("http://localhost:8083/")
-			prxy.AddTarget(u)
+			lb.AddTarget(u)
 			time.Sleep(6 * time.Second)
-			prxy.RemoveTarget(u)
+			lb.RemoveTarget(u)
 		}
 	}()
 
-	log.Fatal(http.ListenAndServe(":8082", prxy))
+	log.Fatal(http.ListenAndServe(":8082", lb))
 }
