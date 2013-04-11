@@ -28,12 +28,12 @@ func NewLoadBalancer(targets []*url.URL) *LoadBalancer {
 
 	director := func(req *http.Request) {
 		target, err := reverse.chooseNextTarget()
-		if err != nil {
+		if err != nil || target == nil {
 			log.Println(err)
 			return
 		}
 
-		// log.Println("Sending request to", target)
+		log.Println("Sending request to", target)
 
 		targetQuery := target.RawQuery
 		req.URL.Scheme = target.Scheme
@@ -74,7 +74,12 @@ func (r *LoadBalancer) AddTarget(u *url.URL) {
 	defer r.mu.Unlock()
 
 	e := &ring.Ring{Value: u}
-	r.targets.Link(e)
+	if r.targets == nil {
+		r.targets = e
+	} else {
+		r.targets.Link(e)
+	}
+
 }
 
 func (r *LoadBalancer) RemoveTarget(u *url.URL) error {
@@ -92,7 +97,12 @@ func (r *LoadBalancer) RemoveTarget(u *url.URL) error {
 	for p := r.targets; i < n; p = p.Next() {
 		url, _ := p.Value.(*url.URL)
 		if url.String() == u.String() {
-			removed = p.Prev().Unlink(1)
+			if r.targets.Len() == 1 {
+				r.targets = nil
+				removed = p
+			} else {
+				removed = p.Prev().Unlink(1)
+			}
 			break
 		}
 	}
@@ -101,7 +111,7 @@ func (r *LoadBalancer) RemoveTarget(u *url.URL) error {
 		return ErrHostNotFound
 	}
 
-	if r.lastUsed.Next().Value.(*url.URL).String() == u.String() {
+	if r.targets != nil && r.lastUsed.Next().Value.(*url.URL).String() == u.String() {
 		r.lastUsed = r.targets.Next()
 	}
 
@@ -129,6 +139,10 @@ func singleJoiningSlash(a, b string) string {
 }
 
 func slice2ring(values []*url.URL) *ring.Ring {
+	if values == nil {
+		return nil
+	}
+
 	r := ring.New(len(values))
 
 	i, n := 0, r.Len()
