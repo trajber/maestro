@@ -4,7 +4,7 @@ Maestro is a fast HTTP load balancer.It uses [Go's SingleHostReverseProxy] (http
 
 ## Use
 
-For instance, to send incoming requests on port 8082 to port 8080 or 8081:
+For instance, to send incoming requests on port 8080 to hosts 1.1.1.1 and 2.2.2.2:
 
 	package main
 
